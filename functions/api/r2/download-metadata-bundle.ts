@@ -2,16 +2,31 @@
 // Cloudflare Pages Function for downloading metadata bundle from R2
 
 export const onRequestPost: PagesFunction = async ({ request, env }) => {
+  console.log('[Functions] download-metadata-bundle 被调用');
+
   try {
-    const { config } = await request.json() as any;
+    const body = await request.json();
+    console.log('[Functions] 请求体:', JSON.stringify(body).substring(0, 200));
+    const { config } = body as any;
 
     if (!config) {
+      console.error('[Functions] 错误: Missing R2 config');
       return Response.json({ success: false, error: 'Missing R2 config' }, { status: 400 });
     }
 
     if (!config.accountId || !config.bucketName || !config.accessKeyId || !config.secretAccessKey) {
+      console.error('[Functions] 错误: Incomplete R2 config', {
+        hasAccountId: !!config.accountId,
+        hasBucketName: !!config.bucketName,
+        hasAccessKeyId: !!config.accessKeyId,
+        hasSecretAccessKey: !!config.secretAccessKey
+      });
       return Response.json({ success: false, error: 'Incomplete R2 config' }, { status: 400 });
     }
+
+    console.log('[Functions] 配置完整，准备请求 R2');
+    console.log('[Functions] Bucket:', config.bucketName);
+    console.log('[Functions] Account ID:', config.accountId.substring(0, 8) + '...');
 
     const fileName = 'metadata-bundle.json';
     const endpoint = config.publicDomain || `https://${config.accountId}.r2.cloudflarestorage.com`;
@@ -79,19 +94,26 @@ ${canonicalRequestHash}`;
       },
     });
 
+    console.log('[Functions] R2 响应状态:', response.status, response.statusText);
+
     if (!response.ok) {
       if (response.status === 404) {
+        console.log('[Functions] 文件不存在 (404)');
         return Response.json({ success: false, notFound: true }, { status: 404 });
       }
+      const errorText = await response.text();
+      console.error('[Functions] R2 错误:', response.status, errorText);
       return Response.json({ success: false, error: `R2 error: ${response.statusText}` }, { status: response.status });
     }
 
     const data = await response.json();
+    console.log('[Functions] 成功获取元数据');
     return Response.json({ success: true, data }, {
       headers: { 'Access-Control-Allow-Origin': '*' },
     });
   } catch (err: any) {
-    console.error('Download metadata bundle error:', err);
+    console.error('[Functions] download-metadata-bundle 异常:', err);
+    console.error('[Functions] 错误栈:', err.stack);
     return Response.json({ success: false, error: err?.message || 'Unknown error' }, { status: 500 });
   }
 };

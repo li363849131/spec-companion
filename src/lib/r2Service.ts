@@ -161,34 +161,51 @@ export async function listDocumentsFromR2(
   config: R2SyncConfig
 ): Promise<{ success: boolean; documents?: any[]; error?: string; notFound?: boolean }> {
   try {
+    console.log('[R2] listDocumentsFromR2 开始');
+    console.log('[R2] 请求 URL:', '/api/r2/list-documents');
+    console.log('[R2] 配置信息:', {
+      accountId: config.accountId?.substring(0, 8) + '...',
+      bucketName: config.bucketName,
+      hasAccessKey: !!config.accessKeyId,
+      hasSecretKey: !!config.secretAccessKey
+    });
+
     const response = await fetch('/api/r2/list-documents', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ config }),
     });
 
+    console.log('[R2] 响应状态:', response.status, response.statusText);
+    console.log('[R2] 响应 headers:', Object.fromEntries(response.headers.entries()));
+
     // 如果 API 端点不存在 (404)
     if (response.status === 404) {
-      console.warn('List documents API not available (404)');
+      console.warn('[R2] List documents API not available (404)');
       return { success: false, notFound: true };
     }
 
     // 如果 R2 配置错误或权限问题 (403)
     if (response.status === 403) {
-      console.error('R2 access forbidden (403) - check your R2 configuration');
+      console.error('[R2] R2 access forbidden (403) - check your R2 configuration');
+      const errorText = await response.text().catch(() => '');
+      console.error('[R2] 403 响应内容:', errorText);
       return { success: false, error: 'R2 访问被拒绝，请检查您的配置（Account ID, Access Key, Secret Key）' };
     }
 
     // 如果返回其他错误状态
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('[R2] HTTP 错误:', response.status, errorText);
       return { success: false, error: `HTTP ${response.status}: ${errorText}` };
     }
 
     const result = await response.json();
+    console.log('[R2] 响应成功，文档数量:', result.documents?.length || 0);
     return result;
   } catch (err: any) {
-    console.error('Failed to list documents from R2:', err);
+    console.error('[R2] listDocumentsFromR2 异常:', err);
+    console.error('[R2] 错误栈:', err.stack);
     return { success: false, error: err.message };
   }
 }
@@ -427,28 +444,43 @@ export async function downloadAllMetadataFromR2(
   config: R2SyncConfig
 ): Promise<{ success: boolean; data?: any; error?: string; notFound?: boolean }> {
   try {
+    console.log('[R2] downloadAllMetadataFromR2 开始');
+    console.log('[R2] 请求 URL:', '/api/r2/download-metadata-bundle');
+    console.log('[R2] 配置信息:', {
+      accountId: config.accountId?.substring(0, 8) + '...',
+      bucketName: config.bucketName,
+      hasAccessKey: !!config.accessKeyId,
+      hasSecretKey: !!config.secretAccessKey
+    });
+
     const response = await fetch('/api/r2/download-metadata-bundle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ config }),
     });
 
+    console.log('[R2] 响应状态:', response.status, response.statusText);
+    console.log('[R2] 响应 headers:', Object.fromEntries(response.headers.entries()));
+
     // 如果 API 端点不存在 (404)，返回 notFound 标志
     if (response.status === 404) {
-      console.warn('Metadata bundle API not available (404), will use fallback method');
+      console.warn('[R2] Metadata bundle API not available (404), will use fallback method');
       return { success: false, notFound: true };
     }
 
     // 如果返回其他错误状态
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('[R2] HTTP 错误:', response.status, errorText);
       return { success: false, error: `HTTP ${response.status}: ${errorText}` };
     }
 
     const result = await response.json();
+    console.log('[R2] 响应成功:', result.success);
     return result;
   } catch (err: any) {
-    console.error('Failed to download metadata bundle from R2:', err);
+    console.error('[R2] downloadAllMetadataFromR2 异常:', err);
+    console.error('[R2] 错误栈:', err.stack);
     return { success: false, error: err.message };
   }
 }
