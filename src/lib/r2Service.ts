@@ -29,7 +29,7 @@ function hex(buffer: ArrayBuffer): string {
 async function hmac(key: Uint8Array, message: string): Promise<Uint8Array> {
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
-    key,
+    key.buffer,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
@@ -73,7 +73,7 @@ async function generateSignatureV4(
   let kRegion = await hmac(kDate, region);
   let kService = await hmac(kRegion, service);
   let kSigning = await hmac(kService, 'aws4_request');
-  const signingKey = await crypto.subtle.importKey('raw', kSigning, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signingKey = await crypto.subtle.importKey('raw', kSigning.buffer, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const signature = hex(await crypto.subtle.sign('HMAC', signingKey, new TextEncoder().encode(stringToSign)));
 
   // Step 4: Build authorization header

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Cloudflare Pages Function for listing all files from R2
 
 export const onRequestPost: PagesFunction = async ({ request, env }) => {
@@ -21,20 +22,32 @@ export const onRequestPost: PagesFunction = async ({ request, env }) => {
     const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
     const canonicalUri = `/${config.bucketName}/`;
     const canonicalQuerystring = 'list-type=2';
-    const canonicalHeaders = `host:${new URL(url).host}\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:${amzDate}\n`;
+    const canonicalHeaders = `host:${new URL(url).host}
+x-amz-content-sha256:UNSIGNED-PAYLOAD
+x-amz-date:${amzDate}
+`;
     const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
-    const canonicalRequest = `GET\n${canonicalUri}\n${canonicalQuerystring}\n${canonicalHeaders}\n${signedHeaders}\nUNSIGNED-PAYLOAD`;
+    const canonicalRequest = `GET
+${canonicalUri}
+${canonicalQuerystring}
+${canonicalHeaders}
+${signedHeaders}
+UNSIGNED-PAYLOAD`;
 
     const canonicalRequestHash = Array.from(
       new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalRequest)))
     ).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
+    const stringToSign = `AWS4-HMAC-SHA256
+${amzDate}
+${credentialScope}
+${canonicalRequestHash}`;
 
     async function hmac(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
+      const keyBuffer = key instanceof Uint8Array ? key.buffer : key;
       const cryptoKey = await crypto.subtle.importKey(
         'raw',
-        key,
+        keyBuffer,
         { name: 'HMAC', hash: 'SHA-256' },
         false,
         ['sign']

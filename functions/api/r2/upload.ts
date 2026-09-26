@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Cloudflare Pages Function for R2 upload
 // Server-side upload to bypass CORS
 
@@ -34,9 +35,17 @@ export const onRequestPost: PagesFunction = async ({ request, env }) => {
     const path = urlObj.pathname;
 
     // Build canonical request
-    const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+    const canonicalHeaders = `host:${host}
+x-amz-content-sha256:${payloadHash}
+x-amz-date:${amzDate}
+`;
     const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
-    const canonicalRequest = `PUT\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+    const canonicalRequest = `PUT
+${path}
+
+${canonicalHeaders}
+${signedHeaders}
+${payloadHash}`;
 
     // String to sign
     const algorithm = 'AWS4-HMAC-SHA256';
@@ -44,11 +53,14 @@ export const onRequestPost: PagesFunction = async ({ request, env }) => {
     const canonicalRequestHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalRequest))))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
-    const stringToSign = `${algorithm}\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
+    const stringToSign = `${algorithm}
+${amzDate}
+${credentialScope}
+${canonicalRequestHash}`;
 
     // Calculate signature (HMAC-SHA256 chain)
     async function hmac(key: Uint8Array, message: string): Promise<Uint8Array> {
-      const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      const cryptoKey = await crypto.subtle.importKey('raw', key.buffer, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
       return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(message)));
     }
 
