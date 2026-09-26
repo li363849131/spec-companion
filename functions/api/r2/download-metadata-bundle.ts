@@ -8,6 +8,10 @@ export const onRequestPost: PagesFunction = async ({ request, env }) => {
       return Response.json({ success: false, error: 'Missing R2 config' }, { status: 400 });
     }
 
+    if (!config.accountId || !config.bucketName || !config.accessKeyId || !config.secretAccessKey) {
+      return Response.json({ success: false, error: 'Incomplete R2 config' }, { status: 400 });
+    }
+
     const fileName = 'metadata-bundle.json';
     const endpoint = config.publicDomain || `https://${config.accountId}.r2.cloudflarestorage.com`;
     const url = `${endpoint}/${config.bucketName}/${fileName}`;
