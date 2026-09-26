@@ -1,4 +1,4 @@
-import { streamAIResponse, SYSTEM_PROMPT_EXPERT, Env } from '../../_shared';
+import { streamAIResponse, SYSTEM_PROMPT_EXPERT, Env } from '../_shared';
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const {
