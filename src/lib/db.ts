@@ -318,12 +318,40 @@ export async function updateChapterCustomNotes(cacheKey: string, notes: string):
 // ================= R2 SYNC CONFIG =================
 
 export async function getR2SyncConfig(): Promise<R2SyncConfig | null> {
-  // Use hardcoded config from config file
   try {
-    const { R2_CONFIG } = await import('../config/r2Config');
-    return R2_CONFIG;
+    const db = await getDB();
+    if (!hasStore(db, 'r2_config')) {
+      console.warn('r2_config store not found');
+      return null;
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction('r2_config', 'readonly');
+        const req = tx.objectStore('r2_config').get('default_r2');
+
+        req.onsuccess = () => {
+          const result = req.result;
+          if (result && result.config) {
+            console.log('[DB] R2 配置已加载');
+            resolve(result.config);
+          } else {
+            console.warn('[DB] 未找到 R2 配置');
+            resolve(null);
+          }
+        };
+
+        req.onerror = () => {
+          console.error('[DB] 读取 R2 配置失败:', req.error);
+          reject(req.error);
+        };
+      } catch (e) {
+        console.error('[DB] 事务创建失败:', e);
+        reject(e);
+      }
+    });
   } catch (err) {
-    console.error('Failed to load R2 config:', err);
+    console.error('[DB] Failed to load R2 config from IndexedDB:', err);
     return null;
   }
 }
