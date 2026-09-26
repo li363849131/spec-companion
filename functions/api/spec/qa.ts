@@ -1,5 +1,6 @@
 import { SYSTEM_PROMPT_EXPERT, Env, AISettings } from './_shared';
-(prompt: string, systemPrompt: string, aiSettings: AISettings | undefined, env: Env): Promise<string> {
+
+async function executeAI(prompt: string, systemPrompt: string, aiSettings: AISettings | undefined, env: Env): Promise<string> {
   const provider = aiSettings?.provider || (aiSettings?.baseUrl ? 'openai_compatible' : 'gemini');
   const baseUrl = aiSettings?.baseUrl || env.AI_BASE_URL || '';
   const apiKey = aiSettings?.apiKey || env.AI_API_KEY || env.GEMINI_API_KEY || '';
