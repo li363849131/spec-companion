@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R2 配置诊断工具</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #0066cc;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 R2 配置诊断工具</h1>
+
+        <div class="form-group">
+            <label>Account ID</label>
+            <input type="text" id="accountId" placeholder="1ae1c488589174c90cf5ded822766a56">
+        </div>
+
+        <div class="form-group">
+            <label>Bucket Name</label>
+            <input type="text" id="bucketName" placeholder="spec">
+        </div>
+
+        <div class="form-group">
+            <label>Access Key ID</label>
+            <input type="text" id="accessKeyId" placeholder="your-access-key-id">
+        </div>
+
+        <div class="form-group">
+            <label>Secret Access Key</label>
+            <input type="password" id="secretAccessKey" placeholder="your-secret-access-key">
+        </div>
+
+        <button onclick="loadFromIndexedDB()">从 IndexedDB 加载</button>
+        <button onclick="testConfiguration()" id="testBtn">测试配置</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function loadFromIndexedDB() {
+            const result = document.getElementById('result');
+            result.textContent = '正在从 IndexedDB 加载配置...';
+
+            try {
+                const request = indexedDB.open('SpecCompanionDB', 2);
+
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const tx = db.transaction('r2_config', 'readonly');
+                    const getRequest = tx.objectStore('r2_config').get('default_r2');
+
+                    getRequest.onsuccess = () => {
+                        const config = getRequest.result?.config;
+                        if (config) {
+                            document.getElementById('accountId').value = config.accountId || '';
+                            document.getElementById('bucketName').value = config.bucketName || '';
+                            document.getElementById('accessKeyId').value = config.accessKeyId || '';
+                            document.getElementById('secretAccessKey').value = config.secretAccessKey || '';
+                            result.textContent = '✅ 配置已从 IndexedDB 加载';
+                            result.className = 'success';
+                        } else {
+                            result.textContent = '❌ IndexedDB 中未找到配置';
+                            result.className = 'error';
+                        }
+                    };
+
+                    getRequest.onerror = () => {
+                        result.textContent = '❌ 读取 IndexedDB 失败';
+                        result.className = 'error';
+                    };
+                };
+
+                request.onerror = () => {
+                    result.textContent = '❌ 打开 IndexedDB 失败';
+                    result.className = 'error';
+                };
+            } catch (err) {
+                result.textContent = '❌ 错误: ' + err.message;
+                result.className = 'error';
+            }
+        }
+
+        async function testConfiguration() {
+            const result = document.getElementById('result');
+            const testBtn = document.getElementById('testBtn');
+
+            const config = {
+                accountId: document.getElementById('accountId').value.trim(),
+                bucketName: document.getElementById('bucketName').value.trim(),
+                accessKeyId: document.getElementById('accessKeyId').value.trim(),
+                secretAccessKey: document.getElementById('secretAccessKey').value.trim(),
+            };
+
+            // 验证输入
+            if (!config.accountId || !config.bucketName || !config.accessKeyId || !config.secretAccessKey) {
+                result.textContent = '❌ 请填写所有字段';
+                result.className = 'error';
+                return;
+            }
+
+            testBtn.disabled = true;
+            result.textContent = '正在测试配置...\n';
+            result.className = '';
+
+            const log = (msg) => {
+                result.textContent += msg + '\n';
+            };
+
+            try {
+                // 测试 1: 调用 Functions API
+                log('\n📡 测试 1: 调用 /api/r2/list-documents');
+                log('-------------------------------------------');
+
+                const response = await fetch('/api/r2/list-documents', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ config }),
+                });
+
+                log(`HTTP 状态: ${response.status} ${response.statusText}`);
+
+                const responseText = await response.text();
+                log(`响应内容: ${responseText}`);
+
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch (e) {
+                    log('⚠️ 响应不是有效的 JSON');
+                }
+
+                if (response.ok && responseData?.success) {
+                    log('\n✅ 成功！R2 配置正确');
+                    log(`找到 ${responseData.documents?.length || 0} 个文档`);
+                    result.className = 'success';
+                } else if (response.status === 404) {
+                    log('\n❌ 404: Functions API 不存在');
+                    log('   可能原因: Functions 未部署或路径错误');
+                    result.className = 'error';
+                } else if (response.status === 403 || responseData?.error?.includes('Forbidden')) {
+                    log('\n❌ 403: R2 访问被拒绝');
+                    log('   可能原因:');
+                    log('   1. Access Key ID 或 Secret Access Key 错误');
+                    log('   2. API Token 权限不足');
+                    log('   3. API Token 已被撤销');
+                    log('   4. Account ID 错误');
+                    log('   5. Bucket 名称错误');
+                    log('\n   请检查:');
+                    log(`   - Account ID: ${config.accountId.substring(0, 8)}...`);
+                    log(`   - Bucket Name: ${config.bucketName}`);
+                    log(`   - Access Key Length: ${config.accessKeyId.length}`);
+                    log(`   - Secret Key Length: ${config.secretAccessKey.length}`);
+                    result.className = 'error';
+                } else {
+                    log(`\n❌ 未知错误: ${response.status}`);
+                    result.className = 'error';
+                }
+
+            } catch (err) {
+                log(`\n❌ 异常: ${err.message}`);
+                result.className = 'error';
+            } finally {
+                testBtn.disabled = false;
+            }
+        }
+
+        // 页面加载时自动从 IndexedDB 加载
+        window.addEventListener('load', loadFromIndexedDB);
+    </script>
+</body>
+</html>

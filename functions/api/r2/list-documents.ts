@@ -6,13 +6,31 @@ export const onRequestPost: PagesFunction = async ({ request, env }) => {
 
   try {
     const body = await request.json();
-    console.log('[Functions] 请求体:', JSON.stringify(body).substring(0, 200));
+    console.log('[Functions] 请求体类型:', typeof body);
+    console.log('[Functions] 请求体 keys:', Object.keys(body));
+    console.log('[Functions] body.config 存在:', !!body.config);
+
     const { config } = body as any;
 
     if (!config) {
       console.error('[Functions] 错误: Missing R2 config');
       return Response.json({ success: false, error: 'Missing R2 config' }, { status: 400 });
     }
+
+    console.log('[Functions] 配置字段:', Object.keys(config));
+    console.log('[Functions] 配置详情:', {
+      hasAccountId: !!config.accountId,
+      accountIdLength: config.accountId?.length,
+      accountIdFirst8: config.accountId?.substring(0, 8),
+      hasBucketName: !!config.bucketName,
+      bucketName: config.bucketName,
+      hasAccessKeyId: !!config.accessKeyId,
+      accessKeyIdLength: config.accessKeyId?.length,
+      accessKeyIdFirst8: config.accessKeyId?.substring(0, 8),
+      hasSecretAccessKey: !!config.secretAccessKey,
+      secretAccessKeyLength: config.secretAccessKey?.length,
+      secretAccessKeyFirst8: config.secretAccessKey?.substring(0, 8),
+    });
 
     if (!config.accountId || !config.bucketName || !config.accessKeyId || !config.secretAccessKey) {
       console.error('[Functions] 错误: Incomplete R2 config', {
@@ -84,6 +102,11 @@ ${canonicalRequestHash}`;
 
     const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
+    console.log('[Functions] 准备请求 R2');
+    console.log('[Functions] URL:', url);
+    console.log('[Functions] Authorization header length:', authorizationHeader.length);
+    console.log('[Functions] Signature length:', signature.length);
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -93,7 +116,20 @@ ${canonicalRequestHash}`;
       },
     });
 
+    console.log('[Functions] R2 响应状态:', response.status, response.statusText);
+    console.log('[Functions] R2 响应 headers:', Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Functions] R2 错误响应体:', errorText);
+      console.error('[Functions] 详细信息:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: url,
+        accountId: config.accountId.substring(0, 8) + '...',
+        bucketName: config.bucketName,
+        accessKeyIdUsed: config.accessKeyId.substring(0, 8) + '...',
+      });
       return Response.json({ success: false, error: `R2 error: ${response.statusText}` }, { status: response.status });
     }
 
