@@ -1,0 +1,8 @@
+{
+  "name": "Spec Companion 芯片与协议Spec精读伴侣",
+  "description": "面向硬件与芯片固件工程师的智能规范精读伴侣，支持PDF视图、多模态时序图与寄存器位域拆解、Linux内核实战、划选追问与秒级本地缓存笔记导出。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

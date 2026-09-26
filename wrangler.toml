@@ -1,0 +1,14 @@
+name = "spec-companion"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+APP_URL = "https://spec-companion.pages.dev"
+
+# Secret environment variables are configured in the Cloudflare Pages dashboard:
+# Settings → Environment variables → Production:
+#   GEMINI_API_KEY
+#   AI_BASE_URL   = https://www.sui-xiang.vip
+#   AI_API_KEY    = sk-28bcbfab936e26b5e63e3d90744b736ac5d9b165f3471335abb3292fb29c98d7
+#   AI_MODEL      = gemini-3.8-flash
