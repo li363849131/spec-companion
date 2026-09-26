@@ -159,13 +159,31 @@ export async function uploadJsonToR2(
  */
 export async function listDocumentsFromR2(
   config: R2SyncConfig
-): Promise<{ success: boolean; documents?: any[]; error?: string }> {
+): Promise<{ success: boolean; documents?: any[]; error?: string; notFound?: boolean }> {
   try {
     const response = await fetch('/api/r2/list-documents', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ config }),
     });
+
+    // 如果 API 端点不存在 (404)
+    if (response.status === 404) {
+      console.warn('List documents API not available (404)');
+      return { success: false, notFound: true };
+    }
+
+    // 如果 R2 配置错误或权限问题 (403)
+    if (response.status === 403) {
+      console.error('R2 access forbidden (403) - check your R2 configuration');
+      return { success: false, error: 'R2 访问被拒绝，请检查您的配置（Account ID, Access Key, Secret Key）' };
+    }
+
+    // 如果返回其他错误状态
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+    }
 
     const result = await response.json();
     return result;
@@ -407,13 +425,25 @@ export async function uploadAllMetadataToR2(
  */
 export async function downloadAllMetadataFromR2(
   config: R2SyncConfig
-): Promise<{ success: boolean; data?: any; error?: string }> {
+): Promise<{ success: boolean; data?: any; error?: string; notFound?: boolean }> {
   try {
     const response = await fetch('/api/r2/download-metadata-bundle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ config }),
     });
+
+    // 如果 API 端点不存在 (404)，返回 notFound 标志
+    if (response.status === 404) {
+      console.warn('Metadata bundle API not available (404), will use fallback method');
+      return { success: false, notFound: true };
+    }
+
+    // 如果返回其他错误状态
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+    }
 
     const result = await response.json();
     return result;

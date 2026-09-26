@@ -1963,15 +1963,22 @@ export default function App() {
         return;
       }
 
-      // Fallback to old method if bundle doesn't exist
-      console.log('Metadata bundle not found, using legacy sync method');
+      // Fallback to old method if bundle doesn't exist or API is not available
+      if (bundleResult.notFound) {
+        console.log('Metadata bundle API not available (404), using legacy sync method');
+      } else {
+        console.log('Metadata bundle not found in R2, using legacy sync method');
+      }
       setStatusMessage('正在列出 R2 中的文档...');
 
       const { listDocumentsFromR2 } = await import('./lib/r2Service');
       const result = await listDocumentsFromR2(r2Config);
 
       if (!result.success || !result.documents) {
-        alert(`从 R2 同步失败: ${result.error || '未知错误'}`);
+        const errorMsg = result.notFound
+          ? 'R2 API 端点不可用，请确认已正确部署 Cloudflare Pages Functions'
+          : result.error || '未知错误';
+        alert(`从 R2 同步失败: ${errorMsg}`);
         return;
       }
 
