@@ -111,10 +111,21 @@ ${canonicalRequestHash}`;
     }
 
     console.log('[Functions] 文件下载成功');
-    const blob = await response.blob();
-    return new Response(blob, {
+    const arrayBuffer = await response.arrayBuffer();
+
+    // Convert ArrayBuffer to base64
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64Data = btoa(binary);
+
+    return Response.json({
+      success: true,
+      base64Data
+    }, {
       headers: {
-        'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream',
         'Access-Control-Allow-Origin': '*',
       },
     });
