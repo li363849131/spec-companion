@@ -338,7 +338,7 @@ export const R2TestPanel: React.FC = () => {
 
       addLog('删除用户文件', 'pending', `找到 ${userFiles.length} 个文件，开始删除...`);
 
-      const endpoint = getEndpoint(config!);
+      // Reuse endpoint from above
       let deletedCount = 0;
       for (const key of userFiles) {
         try {
