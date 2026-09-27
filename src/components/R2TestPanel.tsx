@@ -99,6 +99,11 @@ export const R2TestPanel: React.FC = () => {
     loadConfig();
   }, []);
 
+  // Helper function to get endpoint from config
+  const getEndpoint = (cfg: R2SyncConfig): string => {
+    return cfg.publicDomain || `https://${cfg.accountId}.r2.cloudflarestorage.com`;
+  };
+
   const addLog = (step: string, status: R2TestResult['status'], message: string, details?: any) => {
     setLogs((prev) => [
       ...prev,
@@ -128,7 +133,8 @@ export const R2TestPanel: React.FC = () => {
 
       // Step 3: 构建 S3 API 请求（AWS Signature V4）
       addLog('生成 AWS 签名', 'pending', '计算 AWS Signature V4...');
-      const url = `${config.endpoint}/${config.bucketName}/${testFileName}`;
+      const endpoint = getEndpoint(config);
+      const url = `${endpoint}/${config.bucketName}/${testFileName}`;
       const now = new Date();
       const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
 
@@ -236,7 +242,8 @@ export const R2TestPanel: React.FC = () => {
 
   const handleDeleteFile = async (fileName: string) => {
     try {
-      const url = `${config.endpoint}/${config.bucketName}/${fileName}`;
+      const endpoint = getEndpoint(config!);
+      const url = `${endpoint}/${config!.bucketName}/${fileName}`;
       const deleteAmzDate = new Date().toISOString().replace(/[:\-]|\.\d{3}/g, '');
       const deleteHeaders: Record<string, string> = {
         'Host': new URL(url).hostname,
@@ -244,7 +251,7 @@ export const R2TestPanel: React.FC = () => {
         'x-amz-date': deleteAmzDate,
       };
 
-      const deleteAuth = await generateSignatureV4('DELETE', url, deleteHeaders, '', config.accessKeyId, config.secretAccessKey);
+      const deleteAuth = await generateSignatureV4('DELETE', url, deleteHeaders, '', config!.accessKeyId, config!.secretAccessKey);
       deleteHeaders['Authorization'] = deleteAuth;
 
       const deleteResponse = await fetch(url, { method: 'DELETE', headers: deleteHeaders });
@@ -272,7 +279,8 @@ export const R2TestPanel: React.FC = () => {
       addLog('删除用户文件', 'pending', '查询当前用户的所有文件...');
 
       // List all objects
-      const url = `${config.endpoint}/${config.bucketName}/`;
+      const endpoint = getEndpoint(config!);
+      const url = `${endpoint}/${config!.bucketName}/`;
       const now = new Date();
       const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
       const headers: Record<string, string> = {
@@ -280,7 +288,7 @@ export const R2TestPanel: React.FC = () => {
         'x-amz-content-sha256': hex(await sha256('')),
         'x-amz-date': amzDate,
       };
-      const authorization = await generateSignatureV4('GET', url, headers, '', config.accessKeyId, config.secretAccessKey);
+      const authorization = await generateSignatureV4('GET', url, headers, '', config!.accessKeyId, config!.secretAccessKey);
       headers['Authorization'] = authorization;
 
       const response = await fetch(url, { method: 'GET', headers });
@@ -330,17 +338,18 @@ export const R2TestPanel: React.FC = () => {
 
       addLog('删除用户文件', 'pending', `找到 ${userFiles.length} 个文件，开始删除...`);
 
+      const endpoint = getEndpoint(config!);
       let deletedCount = 0;
       for (const key of userFiles) {
         try {
-          const deleteUrl = `${config.endpoint}/${config.bucketName}/${key}`;
+          const deleteUrl = `${endpoint}/${config!.bucketName}/${key}`;
           const deleteAmzDate = new Date().toISOString().replace(/[:\-]|\.\d{3}/g, '');
           const deleteHeaders: Record<string, string> = {
             'Host': new URL(deleteUrl).hostname,
             'x-amz-content-sha256': hex(await sha256('')),
             'x-amz-date': deleteAmzDate,
           };
-          const deleteAuth = await generateSignatureV4('DELETE', deleteUrl, deleteHeaders, '', config.accessKeyId, config.secretAccessKey);
+          const deleteAuth = await generateSignatureV4('DELETE', deleteUrl, deleteHeaders, '', config!.accessKeyId, config!.secretAccessKey);
           deleteHeaders['Authorization'] = deleteAuth;
 
           const deleteResponse = await fetch(deleteUrl, { method: 'DELETE', headers: deleteHeaders });
@@ -367,7 +376,8 @@ export const R2TestPanel: React.FC = () => {
 
     try {
       addLog('列出对象', 'pending', '查询存储桶里的所有对象...');
-      const url = `${config.endpoint}/${config.bucketName}/`;
+      const endpoint = getEndpoint(config!);
+      const url = `${endpoint}/${config!.bucketName}/`;
 
       const now = new Date();
       const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
@@ -378,7 +388,7 @@ export const R2TestPanel: React.FC = () => {
         'x-amz-date': amzDate,
       };
 
-      const authorization = await generateSignatureV4('GET', url, headers, '', config.accessKeyId, config.secretAccessKey);
+      const authorization = await generateSignatureV4('GET', url, headers, '', config!.accessKeyId, config!.secretAccessKey);
       headers['Authorization'] = authorization;
 
       const response = await fetch(url, { method: 'GET', headers });
@@ -491,7 +501,7 @@ export const R2TestPanel: React.FC = () => {
           <div>Account ID: {config.accountId}</div>
           <div>Bucket: {config.bucketName}</div>
           <div>Access Key: {config.accessKeyId.slice(0, 8)}...</div>
-          <div>Endpoint: {config.endpoint}</div>
+          <div>Endpoint: {getEndpoint(config)}</div>
         </div>
       </div>
 
