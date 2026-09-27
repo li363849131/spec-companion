@@ -767,7 +767,7 @@ export default function App() {
         // Show loading indicator
         setStatusMessage('正在从云端下载 PDF...');
 
-        const r2Path = `${doc.category}/${docId}.pdf`;
+        const r2Path = `documents/${doc.category}/${docId}.pdf`;
         const { downloadDocumentFromR2 } = await import('./lib/r2Service');
         const result = await downloadDocumentFromR2(r2Path, r2Config);
 
