@@ -80,27 +80,25 @@ ${canonicalRequestHash}`;
 
     const xmlText = await response.text();
 
-    // Parse XML response to extract file list
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-    const contents = xmlDoc.getElementsByTagName('Contents');
+    // Parse XML response manually (no DOMParser in Workers environment)
+    const contentsRegex = /<Contents>[\s\S]*?<\/Contents>/g;
+    const keyRegex = /<Key>(.*?)<\/Key>/;
+    const lastModifiedRegex = /<LastModified>(.*?)<\/LastModified>/;
+    const sizeRegex = /<Size>(\d+)<\/Size>/;
 
-    const files = [];
-    for (let i = 0; i < contents.length; i++) {
-      const key = contents[i].getElementsByTagName('Key')[0]?.textContent;
-      const lastModified = contents[i].getElementsByTagName('LastModified')[0]?.textContent;
-      const size = contents[i].getElementsByTagName('Size')[0]?.textContent;
+    const contentsMatches = xmlText.match(contentsRegex) || [];
+
+    const keys = [];
+    for (const content of contentsMatches) {
+      const keyMatch = content.match(keyRegex);
+      const key = keyMatch ? keyMatch[1] : null;
 
       if (key) {
-        files.push({
-          key,
-          lastModified,
-          size: parseInt(size || '0'),
-        });
+        keys.push(key);
       }
     }
 
-    return Response.json({ success: true, files }, {
+    return Response.json({ success: true, keys }, {
       headers: { 'Access-Control-Allow-Origin': '*' },
     });
   } catch (err: any) {

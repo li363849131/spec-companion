@@ -80,27 +80,28 @@ ${canonicalRequestHash}`;
 
     const xmlText = await response.text();
 
-    // Parse XML response to extract analysis file list
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-    const contents = xmlDoc.getElementsByTagName('Contents');
+    // Parse XML response manually (no DOMParser in Workers environment)
+    const contentsRegex = /<Contents>[\s\S]*?<\/Contents>/g;
+    const keyRegex = /<Key>(.*?)<\/Key>/;
+    const lastModifiedRegex = /<LastModified>(.*?)<\/LastModified>/;
+    const sizeRegex = /<Size>(\d+)<\/Size>/;
 
-    const analysisFiles = [];
-    for (let i = 0; i < contents.length; i++) {
-      const key = contents[i].getElementsByTagName('Key')[0]?.textContent;
-      const lastModified = contents[i].getElementsByTagName('LastModified')[0]?.textContent;
-      const size = contents[i].getElementsByTagName('Size')[0]?.textContent;
+    const contentsMatches = xmlText.match(contentsRegex) || [];
+
+    const files = [];
+    for (const content of contentsMatches) {
+      const keyMatch = content.match(keyRegex);
+      const lastModifiedMatch = content.match(lastModifiedRegex);
+      const sizeMatch = content.match(sizeRegex);
+
+      const key = keyMatch ? keyMatch[1] : null;
 
       if (key && key.startsWith('analysis/') && key.endsWith('.json')) {
-        analysisFiles.push({
-          key,
-          lastModified,
-          size: parseInt(size || '0'),
-        });
+        files.push(key);
       }
     }
 
-    return Response.json({ success: true, analysisFiles }, {
+    return Response.json({ success: true, files }, {
       headers: { 'Access-Control-Allow-Origin': '*' },
     });
   } catch (err: any) {
