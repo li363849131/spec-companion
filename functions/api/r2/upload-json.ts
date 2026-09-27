@@ -7,30 +7,30 @@ export const onRequestPost: PagesFunction = async ({ request, env }) => {
   try {
     const body = await request.json();
     console.log('[Functions] 请求体 keys:', Object.keys(body));
-    console.log('[Functions] body.fileName 存在:', !!body.fileName);
-    console.log('[Functions] body.data 存在:', !!body.data);
-    console.log('[Functions] body.config 存在:', !!body.config);
 
-    const { fileName, data, config } = body as any;
+    const { fileName, data, jsonBase64, config } = body as any;
+
+    // 支持两种格式：data (直接 JSON) 或 jsonBase64 (Base64 编码)
+    const jsonData = data || (jsonBase64 ? JSON.parse(atob(jsonBase64)) : null);
 
     console.log('[Functions] 参数检查:', {
       hasFileName: !!fileName,
       hasData: !!data,
+      hasJsonBase64: !!jsonBase64,
       hasConfig: !!config,
       fileNameValue: fileName,
-      dataType: typeof data,
     });
 
-    if (!fileName || !data || !config) {
+    if (!fileName || !jsonData || !config) {
       console.error('[Functions] 错误: Missing required parameters', {
         hasFileName: !!fileName,
-        hasData: !!data,
+        hasJsonData: !!jsonData,
         hasConfig: !!config,
       });
       return Response.json({ success: false, error: 'Missing required parameters' }, { status: 400 });
     }
 
-    const jsonContent = JSON.stringify(data);
+    const jsonContent = JSON.stringify(jsonData);
     const bytes = new TextEncoder().encode(jsonContent);
 
     const endpoint = config.publicDomain || `https://${config.accountId}.r2.cloudflarestorage.com`;
