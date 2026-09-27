@@ -150,17 +150,17 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <optgroup label="内置核心协议规范">
                 {documents
-                  .filter((d) => d.category !== 'custom')
+                  .filter((d) => d.category !== 'custom' && !d.isCollection)
                   .map((doc) => (
                     <option key={doc.id} value={doc.id}>
                       {doc.name} ({doc.version || 'Spec'})
                     </option>
                   ))}
               </optgroup>
-              {documents.some((d) => d.category === 'custom') && (
+              {documents.some((d) => d.category === 'custom' && !d.isCollection) && (
                 <optgroup label="自定义上传书籍">
                   {documents
-                    .filter((d) => d.category === 'custom')
+                    .filter((d) => d.category === 'custom' && !d.isCollection)
                     .map((doc) => (
                       <option key={doc.id} value={doc.id}>
                         {doc.name} ({doc.totalPages}P)
