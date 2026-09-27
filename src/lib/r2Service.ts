@@ -225,21 +225,16 @@ export async function downloadJsonFromR2(
       body: JSON.stringify({ r2Path, config }),
     });
 
-    const result = await response.json();
-
-    if (!result.success) {
-      return { success: false, error: result.error };
+    // Check if response is an error (JSON)
+    if (!response.ok) {
+      const result = await response.json();
+      return { success: false, error: result.error || `HTTP ${response.status}` };
     }
 
-    // Decode base64 to string (handle UTF-8 properly)
-    const binaryString = atob(result.base64Data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    const decoder = new TextDecoder('utf-8');
-    const jsonString = decoder.decode(bytes);
-    const jsonData = JSON.parse(jsonString);
+    // Get binary data as Blob, then parse as JSON
+    const blob = await response.blob();
+    const text = await blob.text();
+    const jsonData = JSON.parse(text);
 
     return {
       success: true,
@@ -269,22 +264,19 @@ export async function downloadDocumentFromR2(
       body: JSON.stringify({ r2Path, config }),
     });
 
-    const result = await response.json();
-
-    if (!result.success) {
-      return { success: false, error: result.error };
+    // Check if response is an error (JSON)
+    if (!response.ok) {
+      const result = await response.json();
+      return { success: false, error: result.error || `HTTP ${response.status}` };
     }
 
-    // Decode base64 to ArrayBuffer
-    const binaryString = atob(result.base64Data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+    // Get binary data directly as Blob
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
 
     return {
       success: true,
-      data: bytes.buffer,
+      data: arrayBuffer,
     };
   } catch (err: any) {
     console.error('Failed to download from R2:', err);
