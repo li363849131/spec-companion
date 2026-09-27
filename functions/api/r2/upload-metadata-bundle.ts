@@ -2,15 +2,35 @@
 // Cloudflare Pages Function for uploading metadata bundle to R2
 
 export const onRequestPost: PagesFunction = async ({ request, env }) => {
-  try {
-    const { data, config } = await request.json() as any;
+  console.log('[Functions] upload-metadata-bundle 被调用');
 
-    if (!data || !config) {
+  try {
+    const body = await request.json();
+    console.log('[Functions] 请求体 keys:', Object.keys(body));
+
+    const { data, metadata, config } = body as any;
+
+    // 支持两种字段名：data 或 metadata
+    const metadataData = data || metadata;
+
+    console.log('[Functions] 参数检查:', {
+      hasData: !!data,
+      hasMetadata: !!metadata,
+      hasConfig: !!config,
+      metadataType: typeof metadataData,
+    });
+
+    if (!metadataData || !config) {
+      console.error('[Functions] 错误: Missing required parameters', {
+        hasData: !!data,
+        hasMetadata: !!metadata,
+        hasConfig: !!config,
+      });
       return Response.json({ success: false, error: 'Missing required parameters' }, { status: 400 });
     }
 
     const fileName = 'metadata-bundle.json';
-    const jsonContent = JSON.stringify(data);
+    const jsonContent = JSON.stringify(metadataData);
     const bytes = new TextEncoder().encode(jsonContent);
 
     const endpoint = config.publicDomain || `https://${config.accountId}.r2.cloudflarestorage.com`;
