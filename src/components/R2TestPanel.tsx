@@ -294,7 +294,8 @@ export const R2TestPanel: React.FC = () => {
         key.startsWith('test/') || // test files
         key.endsWith('.pdf') || // all PDFs (in category directories)
         key.startsWith('analysis/') || // all analysis files
-        key.startsWith('metadata/') // metadata JSON files
+        key.startsWith('metadata/') || // metadata JSON files
+        key === 'metadata-bundle.json' // metadata bundle in root
       );
 
       console.log('Filtered user files:', userFiles);
