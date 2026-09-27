@@ -2,10 +2,25 @@
 // Cloudflare Pages Function for downloading files from R2
 
 export const onRequestPost: PagesFunction = async ({ request, env }) => {
+  console.log('[Functions] download 被调用');
+
   try {
-    const { fileName, config } = await request.json() as any;
+    const body = await request.json();
+    console.log('[Functions] 请求体 keys:', Object.keys(body));
+
+    const { fileName, config } = body as any;
+
+    console.log('[Functions] 参数检查:', {
+      hasFileName: !!fileName,
+      hasConfig: !!config,
+      fileNameValue: fileName,
+    });
 
     if (!fileName || !config) {
+      console.error('[Functions] 错误: Missing required parameters', {
+        hasFileName: !!fileName,
+        hasConfig: !!config,
+      });
       return Response.json({ success: false, error: 'Missing required parameters' }, { status: 400 });
     }
 
