@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TestTube, AlertCircle, CheckCircle, Loader, Trash2 } from 'lucide-react';
+import { getR2SyncConfig } from '../lib/db';
+import { R2SyncConfig } from '../types';
 
 interface R2TestResult {
   step: string;
@@ -78,13 +80,24 @@ export const R2TestPanel: React.FC = () => {
   const [logs, setLogs] = useState<R2TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
-  const [config] = useState({
-    accountId: '1ae1c488589174c90cf5ded822766a56',
-    bucketName: 'spec',
-    accessKeyId: '104728a9c9734593c4086fb07383858e',
-    secretAccessKey: '94d111f5c8cfcd8ff044ad15294dcda30f4c03c4e1ec64b82474312eee10504a',
-    endpoint: 'https://1ae1c488589174c90cf5ded822766a56.r2.cloudflarestorage.com',
-  });
+
+  // Load config from IndexedDB instead of hardcoding
+  const [config, setConfig] = useState<R2SyncConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const saved = await getR2SyncConfig();
+        setConfig(saved);
+      } catch (err) {
+        console.error('Failed to load R2 config:', err);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    loadConfig();
+  }, []);
 
   const addLog = (step: string, status: R2TestResult['status'], message: string, details?: any) => {
     setLogs((prev) => [
@@ -402,6 +415,39 @@ export const R2TestPanel: React.FC = () => {
       setIsRunning(false);
     }
   };
+
+  // Loading state
+  if (configLoading) {
+    return (
+      <div className="p-6 bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p>正在加载 R2 配置...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No config state
+  if (!config) {
+    return (
+      <div className="p-6 bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">R2 未配置</h2>
+          <p className="text-slate-400 mb-4">
+            请先在主应用中配置 R2 设置（设置图标 → R2 同步配置）
+          </p>
+          <a
+            href="/"
+            className="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded transition"
+          >
+            返回主应用
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 bg-slate-900 text-slate-100 min-h-screen">
