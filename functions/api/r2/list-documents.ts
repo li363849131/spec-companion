@@ -135,24 +135,31 @@ ${canonicalRequestHash}`;
 
     const xmlText = await response.text();
 
-    // Parse XML response to extract document list
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-    const contents = xmlDoc.getElementsByTagName('Contents');
-
+    // Parse XML response manually (no DOMParser in Workers environment)
     const documents = [];
-    for (let i = 0; i < contents.length; i++) {
-      const key = contents[i].getElementsByTagName('Key')[0]?.textContent;
-      const lastModified = contents[i].getElementsByTagName('LastModified')[0]?.textContent;
-      const size = contents[i].getElementsByTagName('Size')[0]?.textContent;
+
+    // Simple regex-based XML parsing for Contents elements
+    const contentsRegex = /<Contents>[\s\S]*?<\/Contents>/g;
+    const keyRegex = /<Key>(.*?)<\/Key>/;
+    const lastModifiedRegex = /<LastModified>(.*?)<\/LastModified>/;
+    const sizeRegex = /<Size>(\d+)<\/Size>/;
+
+    const contentsMatches = xmlText.match(contentsRegex) || [];
+
+    for (const content of contentsMatches) {
+      const keyMatch = content.match(keyRegex);
+      const lastModifiedMatch = content.match(lastModifiedRegex);
+      const sizeMatch = content.match(sizeRegex);
+
+      const key = keyMatch ? keyMatch[1] : null;
 
       if (key && key.startsWith('documents/') && key.endsWith('.pdf')) {
         const docId = key.replace('documents/', '').replace('.pdf', '');
         documents.push({
           docId,
           key,
-          lastModified,
-          size: parseInt(size || '0'),
+          lastModified: lastModifiedMatch ? lastModifiedMatch[1] : null,
+          size: sizeMatch ? parseInt(sizeMatch[1]) : 0,
         });
       }
     }
