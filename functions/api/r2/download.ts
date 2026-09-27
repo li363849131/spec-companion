@@ -8,24 +8,29 @@ export const onRequestPost: PagesFunction = async ({ request, env }) => {
     const body = await request.json();
     console.log('[Functions] 请求体 keys:', Object.keys(body));
 
-    const { fileName, config } = body as any;
+    const { fileName, r2Path, config } = body as any;
+
+    // 支持两种字段名：fileName 或 r2Path
+    const filePathToDownload = fileName || r2Path;
 
     console.log('[Functions] 参数检查:', {
       hasFileName: !!fileName,
+      hasR2Path: !!r2Path,
       hasConfig: !!config,
-      fileNameValue: fileName,
+      finalPath: filePathToDownload,
     });
 
-    if (!fileName || !config) {
+    if (!filePathToDownload || !config) {
       console.error('[Functions] 错误: Missing required parameters', {
         hasFileName: !!fileName,
+        hasR2Path: !!r2Path,
         hasConfig: !!config,
       });
       return Response.json({ success: false, error: 'Missing required parameters' }, { status: 400 });
     }
 
     const endpoint = config.publicDomain || `https://${config.accountId}.r2.cloudflarestorage.com`;
-    const url = `${endpoint}/${config.bucketName}/${fileName}`;
+    const url = `${endpoint}/${config.bucketName}/${filePathToDownload}`;
 
     // AWS v4 signature for R2
     const now = new Date();
@@ -35,7 +40,7 @@ export const onRequestPost: PagesFunction = async ({ request, env }) => {
     const service = 's3';
 
     const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
-    const canonicalUri = `/${config.bucketName}/${fileName}`;
+    const canonicalUri = `/${config.bucketName}/${filePathToDownload}`;
     const canonicalQuerystring = '';
     const canonicalHeaders = `host:${new URL(url).host}
 x-amz-content-sha256:UNSIGNED-PAYLOAD
