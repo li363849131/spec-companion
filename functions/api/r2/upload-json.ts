@@ -2,10 +2,31 @@
 // Cloudflare Pages Function for uploading JSON files to R2
 
 export const onRequestPost: PagesFunction = async ({ request, env }) => {
+  console.log('[Functions] upload-json 被调用');
+
   try {
-    const { fileName, data, config } = await request.json() as any;
+    const body = await request.json();
+    console.log('[Functions] 请求体 keys:', Object.keys(body));
+    console.log('[Functions] body.fileName 存在:', !!body.fileName);
+    console.log('[Functions] body.data 存在:', !!body.data);
+    console.log('[Functions] body.config 存在:', !!body.config);
+
+    const { fileName, data, config } = body as any;
+
+    console.log('[Functions] 参数检查:', {
+      hasFileName: !!fileName,
+      hasData: !!data,
+      hasConfig: !!config,
+      fileNameValue: fileName,
+      dataType: typeof data,
+    });
 
     if (!fileName || !data || !config) {
+      console.error('[Functions] 错误: Missing required parameters', {
+        hasFileName: !!fileName,
+        hasData: !!data,
+        hasConfig: !!config,
+      });
       return Response.json({ success: false, error: 'Missing required parameters' }, { status: 400 });
     }
 
