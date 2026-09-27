@@ -20,7 +20,7 @@ export const onRequestPost: PagesFunction = async ({ request, env }) => {
     const service = 's3';
 
     const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
-    const canonicalUri = `/${config.bucketName}/`;
+    const canonicalUri = `/${config.bucketName}`;
     const canonicalQuerystring = 'list-type=2';
     const canonicalHeaders = `host:${new URL(url).host}
 x-amz-content-sha256:UNSIGNED-PAYLOAD
