@@ -155,9 +155,24 @@ ${canonicalRequestHash}`;
 
       if (key && key.startsWith('documents/') && key.endsWith('.pdf')) {
         const docId = key.replace('documents/', '').replace('.pdf', '');
+
+        // Extract category from docId prefix
+        let category = 'custom'; // default
+        const prefixMatch = docId.match(/^([a-z]+)_/);
+        if (prefixMatch) {
+          const prefix = prefixMatch[1];
+          if (['pcie', 'arm', 'cxl', 'usb', 'custom'].includes(prefix)) {
+            category = prefix;
+          }
+        }
+
+        const fileName = `${docId}.pdf`;
+
         documents.push({
           docId,
-          key,
+          category,
+          fileName,
+          r2Path: key,  // Complete path: "documents/xxx.pdf"
           lastModified: lastModifiedMatch ? lastModifiedMatch[1] : null,
           size: sizeMatch ? parseInt(sizeMatch[1]) : 0,
         });
