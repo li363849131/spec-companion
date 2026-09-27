@@ -85,6 +85,9 @@ ${canonicalRequestHash}`;
 
     const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
+    console.log('[Functions] 准备请求 R2');
+    console.log('[Functions] URL:', url);
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -94,10 +97,20 @@ ${canonicalRequestHash}`;
       },
     });
 
+    console.log('[Functions] R2 响应状态:', response.status, response.statusText);
+
     if (!response.ok) {
+      if (response.status === 404) {
+        console.error('[Functions] 文件不存在 (404):', filePathToDownload);
+        console.error('[Functions] 完整 URL:', url);
+      } else {
+        const errorText = await response.text();
+        console.error('[Functions] R2 错误:', response.status, errorText);
+      }
       return Response.json({ success: false, error: `R2 error: ${response.statusText}` }, { status: response.status });
     }
 
+    console.log('[Functions] 文件下载成功');
     const blob = await response.blob();
     return new Response(blob, {
       headers: {
